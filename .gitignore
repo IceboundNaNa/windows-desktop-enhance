@@ -1,0 +1,17 @@
+# Build intermediates
+src/obj/
+src/bin/
+installer/obj/
+installer/bin/
+obj/
+bin/
+
+# IDE & user files
+.vs/
+.vscode/
+*.user
+*.suo
+*.pdb
+*.cache
+Thumbs.db
+desktop.ini
