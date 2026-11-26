@@ -21,41 +21,42 @@ jobs:
         run: |
           .\build.ps1 -NoSign
 
-      - name: Package artifacts for SignPath
+      - name: Package unsigned binaries into zip
         shell: powershell
         run: |
           New-Item -ItemType Directory -Path .\dist -Force | Out-Null
           Copy-Item ".\Windows Desktop Enhance.exe" .\dist\
           Copy-Item ".\Windows Desktop Enhance Setup.exe" .\dist\
+          Compress-Archive -Path ".\dist\*.exe" -DestinationPath ".\unsigned.zip" -Force
 
-      - name: Upload build artifacts
-        id: upload-artifact
+      - name: Upload unsigned build artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-desktop-enhance-unsigned
-          path: .\dist\*.exe
+          path: .\unsigned.zip
 
-      - name: Submit signing request to SignPath
+      - name: Sign binaries with SignPath
         if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
-        uses: signpath/github-action-submit-signing-request@v3
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: 'e7019df8-c938-45f4-8c5b-1728ea2cfdb9'
-          project-slug: 'windows-desktop-enhance'
-          signing-policy-slug: 'release-signing'
-          github-artifact-id: ${{ steps.upload-artifact.outputs.artifact-id }}
-          wait-for-completion: true
-          output-artifact-directory: './signed'
-
-      - name: Prepare final release files
         shell: powershell
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
         run: |
-          if (Test-Path .\signed) {
-            Write-Host "Using SignPath signed binaries"
-            Copy-Item .\signed\* .\dist\ -Force
-          } else {
-            Write-Host "SIGNPATH_API_TOKEN not set; using unsigned CI binaries"
-          }
+          Install-Module -Name SignPath -Scope CurrentUser -Force
+          Submit-SigningRequest `
+            -ApiToken $env:SIGNPATH_API_TOKEN `
+            -OrganizationId 'e7019df8-c938-45f4-8c5b-1728ea2cfdb9' `
+            -ProjectSlug 'windows-desktop-enhance' `
+            -SigningPolicySlug 'release-signing' `
+            -InputArtifactPath '.\unsigned.zip' `
+            -OutputArtifactPath '.\signed.zip' `
+            -WaitForCompletion
+          Expand-Archive -Path '.\signed.zip' -DestinationPath '.\dist' -Force
+
+      - name: Upload final build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-desktop-enhance-release
+          path: .\dist\*.exe
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
