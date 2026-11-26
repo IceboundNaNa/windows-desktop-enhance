@@ -202,6 +202,19 @@ namespace DesktopRightAlign.Services
 
         private static Icon CreateFluentTrayIcon()
         {
+            try
+            {
+                string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                if (!string.IsNullOrEmpty(exePath))
+                {
+                    Icon associated = Icon.ExtractAssociatedIcon(exePath);
+                    if (associated != null) return associated;
+                }
+            }
+            catch
+            {
+            }
+
             using (Bitmap bmp = new Bitmap(32, 32))
             using (Graphics g = Graphics.FromImage(bmp))
             {
