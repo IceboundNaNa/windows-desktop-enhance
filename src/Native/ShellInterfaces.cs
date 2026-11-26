@@ -112,7 +112,9 @@ namespace DesktopRightAlign.Native
         public const uint SHGDN_INFOLDER = 0x0001;
         public const uint SHGDN_FORPARSING = 0x8000;
 
+        public const uint SFGAO_STREAM = 0x00400000;
         public const uint SFGAO_FOLDER = 0x20000000;
+        public const uint SFGAO_FILESYSTEM = 0x40000000;
     }
 
     [ComImport]

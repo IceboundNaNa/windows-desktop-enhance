@@ -15,6 +15,7 @@ namespace DesktopRightAlign.Models
         public string ItemType { get; set; }
         public long SizeBytes { get; set; }
         public DateTime? ModifiedTime { get; set; }
+        public bool IsSystemIcon { get; set; }
         public bool IsFolder { get; set; }
     }
 

@@ -565,6 +565,9 @@ namespace DesktopRightAlign.Native
                 return new List<DesktopItemEntry>();
             }
 
+            string userDesktopDir = EnsureTrailingSlash(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
+            string commonDesktopDir = EnsureTrailingSlash(Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory));
+
             List<DesktopItemEntry> entries = new List<DesktopItemEntry>(count);
             for (int i = 0; i < count; i++)
             {
@@ -583,10 +586,22 @@ namespace DesktopRightAlign.Native
                 string displayName = GetItemDisplayName(session.ShellFolder, pidl, ShellConstants.SHGDN_NORMAL);
                 string parsingName = GetItemDisplayName(session.ShellFolder, pidl, ShellConstants.SHGDN_FORPARSING);
 
-                uint attrs = ShellConstants.SFGAO_FOLDER;
+                uint attrs = ShellConstants.SFGAO_FOLDER | ShellConstants.SFGAO_STREAM | ShellConstants.SFGAO_FILESYSTEM;
                 IntPtr[] singlePidl = new IntPtr[] { pidl };
                 session.ShellFolder.GetAttributesOf(1, singlePidl, ref attrs);
-                bool isFolder = (attrs & ShellConstants.SFGAO_FOLDER) != 0;
+
+                bool isFileSystem = (attrs & ShellConstants.SFGAO_FILESYSTEM) != 0;
+                bool isInDesktopDirs = !string.IsNullOrEmpty(parsingName) &&
+                    (parsingName.StartsWith(userDesktopDir, StringComparison.OrdinalIgnoreCase) ||
+                     parsingName.StartsWith(commonDesktopDir, StringComparison.OrdinalIgnoreCase));
+
+                bool isSystemIcon = !isFileSystem ||
+                                    (!string.IsNullOrEmpty(parsingName) && parsingName.StartsWith("::", StringComparison.Ordinal)) ||
+                                    !isInDesktopDirs;
+
+                bool isFolder = !isSystemIcon &&
+                                (attrs & ShellConstants.SFGAO_FOLDER) != 0 &&
+                                (attrs & ShellConstants.SFGAO_STREAM) == 0;
 
                 string itemType = string.Empty;
                 long sizeBytes = 0;
@@ -625,6 +640,7 @@ namespace DesktopRightAlign.Native
                     ItemType = itemType,
                     SizeBytes = sizeBytes,
                     ModifiedTime = modified,
+                    IsSystemIcon = isSystemIcon,
                     IsFolder = isFolder
                 };
 
@@ -687,6 +703,19 @@ namespace DesktopRightAlign.Native
             return (int)sortMode;
         }
 
+        private static string EnsureTrailingSlash(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return string.Empty;
+            return path.EndsWith("\\", StringComparison.Ordinal) ? path : path + "\\";
+        }
+
+        private static int GetSortGroupRank(DesktopIconInfo info)
+        {
+            if (info.IsSystemIcon) return 0; // System icons first (User, This PC, Network, Recycle Bin, Control Panel)
+            if (info.IsFolder) return 1;     // Regular desktop folders immediately after system icons
+            return 2;                        // Regular files and shortcuts
+        }
+
         private void SortEntriesNative(DesktopComSession session, List<DesktopItemEntry> entries, DesktopSortMode sortMode, bool ascending)
         {
             int nativeColumn = ResolveNativeColumnIndex(session.ShellFolder2, sortMode);
@@ -694,6 +723,13 @@ namespace DesktopRightAlign.Native
 
             entries.Sort(delegate(DesktopItemEntry a, DesktopItemEntry b)
             {
+                int groupA = GetSortGroupRank(a.Info);
+                int groupB = GetSortGroupRank(b.Info);
+                if (groupA != groupB)
+                {
+                    return groupA.CompareTo(groupB);
+                }
+
                 int cmp = 0;
                 int hr = session.ShellFolder.CompareIDs(lParam, a.Pidl, b.Pidl);
                 if (hr >= 0)
@@ -715,6 +751,11 @@ namespace DesktopRightAlign.Native
                     }
                 }
 
+                // Keep system icons in native Windows order; apply asc/desc within folders & files
+                if (groupA == 0)
+                {
+                    return cmp;
+                }
                 return ascending ? cmp : -cmp;
             });
         }
