@@ -218,8 +218,10 @@ namespace WindowsDesktopEnhance.Setup
                 {
                     if (uKey != null)
                     {
+                        Version asmVer = asm.GetName().Version;
+                        string displayVer = asmVer != null ? asmVer.ToString(3) : "1.1.0";
                         uKey.SetValue("DisplayName", "Windows Desktop Enhance");
-                        uKey.SetValue("DisplayVersion", "1.1.0");
+                        uKey.SetValue("DisplayVersion", displayVer);
                         uKey.SetValue("Publisher", "Windows Desktop Enhance");
                         uKey.SetValue("InstallLocation", installDir);
                         uKey.SetValue("DisplayIcon", _installedExePath);

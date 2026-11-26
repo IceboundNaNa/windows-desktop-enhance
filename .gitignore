@@ -6,6 +6,12 @@ installer/bin/
 obj/
 bin/
 
+# Certificates / private keys (never commit private keys!)
+*.pfx
+*.p12
+*.key
+*.cer
+
 # IDE & user files
 .vs/
 .vscode/
