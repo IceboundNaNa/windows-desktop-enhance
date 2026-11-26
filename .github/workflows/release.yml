@@ -36,21 +36,24 @@ jobs:
           path: .\unsigned.zip
 
       - name: Sign binaries with SignPath
-        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
         shell: powershell
         env:
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
         run: |
-          Install-Module -Name SignPath -Scope CurrentUser -Force
-          Submit-SigningRequest `
-            -ApiToken $env:SIGNPATH_API_TOKEN `
-            -OrganizationId 'e7019df8-c938-45f4-8c5b-1728ea2cfdb9' `
-            -ProjectSlug 'windows-desktop-enhance' `
-            -SigningPolicySlug 'release-signing' `
-            -InputArtifactPath '.\unsigned.zip' `
-            -OutputArtifactPath '.\signed.zip' `
-            -WaitForCompletion
-          Expand-Archive -Path '.\signed.zip' -DestinationPath '.\dist' -Force
+          if ([string]::IsNullOrWhiteSpace($env:SIGNPATH_API_TOKEN)) {
+            Write-Host "SIGNPATH_API_TOKEN is not set; skipping SignPath signing."
+          } else {
+            Install-Module -Name SignPath -Scope CurrentUser -Force
+            Submit-SigningRequest `
+              -ApiToken $env:SIGNPATH_API_TOKEN `
+              -OrganizationId 'e7019df8-c938-45f4-8c5b-1728ea2cfdb9' `
+              -ProjectSlug 'windows-desktop-enhance' `
+              -SigningPolicySlug 'release-signing' `
+              -InputArtifactPath '.\unsigned.zip' `
+              -OutputArtifactPath '.\signed.zip' `
+              -WaitForCompletion
+            Expand-Archive -Path '.\signed.zip' -DestinationPath '.\dist' -Force
+          }
 
       - name: Upload final build artifact
         uses: actions/upload-artifact@v4
