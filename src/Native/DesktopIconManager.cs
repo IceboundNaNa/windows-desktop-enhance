@@ -760,6 +760,13 @@ namespace DesktopRightAlign.Native
             });
         }
 
+        private static DesktopAlignSide GetTargetSide(DesktopIconInfo info, AppSettings settings)
+        {
+            if (info.IsSystemIcon) return settings.SystemIconsAlign;
+            if (info.IsFolder) return settings.FoldersAlign;
+            return settings.FilesAlign;
+        }
+
         private void ComputeRightAlignedTargets(List<DesktopItemEntry> entries, DesktopEnvironmentInfo envInfo, AppSettings settings)
         {
             int stepX = settings.UseNativeGridSpacing ? envInfo.SpacingX : settings.CustomHorizontalSpacing;
@@ -775,11 +782,12 @@ namespace DesktopRightAlign.Native
             int usableHeight = (workBottom - settings.BottomMargin) - (workTop + settings.TopMargin);
             int rowsPerColumn = Math.Max(1, usableHeight / stepY);
 
-            int firstColX = workRight - settings.RightMargin - stepX;
+            int leftStartX = workLeft + settings.LeftMargin;
+            int rightStartX = workRight - settings.RightMargin - stepX;
             int topStartY = workTop + settings.TopMargin;
             int bottomStartY = workBottom - settings.BottomMargin - stepY;
 
-            int maxColumns = Math.Max(1, ((firstColX - workLeft) / stepX) + 1);
+            int maxColumns = Math.Max(1, ((workRight - workLeft) / stepX) + 1);
 
             List<ExclusionZone> activeZones = new List<ExclusionZone>();
             if (settings.ExclusionZonesEnabled && settings.ExclusionZones != null)
@@ -794,30 +802,72 @@ namespace DesktopRightAlign.Native
                 }
             }
 
-            // Build ordered list of valid right-to-left grid slots, skipping any slot overlapping an exclusion zone.
-            List<POINT> availableSlots = new List<POINT>(entries.Count);
+            List<DesktopItemEntry> leftEntries = new List<DesktopItemEntry>();
+            List<DesktopItemEntry> rightEntries = new List<DesktopItemEntry>();
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (GetTargetSide(entries[i].Info, settings) == DesktopAlignSide.Left)
+                {
+                    leftEntries.Add(entries[i]);
+                }
+                else
+                {
+                    rightEntries.Add(entries[i]);
+                }
+            }
+
+            HashSet<long> occupiedCells = new HashSet<long>();
+            AssignSideTargets(leftEntries, true, leftStartX, rightStartX, workLeft, workRight, workTop, topStartY, bottomStartY, stepX, stepY, rowsPerColumn, maxColumns, activeZones, occupiedCells, settings.FlowDirection);
+            AssignSideTargets(rightEntries, false, leftStartX, rightStartX, workLeft, workRight, workTop, topStartY, bottomStartY, stepX, stepY, rowsPerColumn, maxColumns, activeZones, occupiedCells, settings.FlowDirection);
+        }
+
+        private static long PackCellKey(int x, int y, int stepX, int stepY)
+        {
+            int gx = x / Math.Max(1, stepX);
+            int gy = y / Math.Max(1, stepY);
+            return ((long)gx << 32) | (uint)gy;
+        }
+
+        private static void AssignSideTargets(
+            List<DesktopItemEntry> sideEntries,
+            bool alignLeft,
+            int leftStartX,
+            int rightStartX,
+            int workLeft,
+            int workRight,
+            int workTop,
+            int topStartY,
+            int bottomStartY,
+            int stepX,
+            int stepY,
+            int rowsPerColumn,
+            int maxColumns,
+            List<ExclusionZone> activeZones,
+            HashSet<long> occupiedCells,
+            VerticalFlowDirection flowDirection)
+        {
+            if (sideEntries.Count == 0) return;
+
+            List<POINT> availableSlots = new List<POINT>(sideEntries.Count);
             List<POINT> fallbackSlots = new List<POINT>();
             const int inset = 4;
 
             for (int col = 0; col < maxColumns; col++)
             {
-                int x = firstColX - (col * stepX);
-                if (x < workLeft)
-                {
-                    break;
-                }
+                int x = alignLeft ? (leftStartX + col * stepX) : (rightStartX - col * stepX);
+                if (alignLeft && x + stepX > workRight) break;
+                if (!alignLeft && x < workLeft) break;
 
                 for (int row = 0; row < rowsPerColumn; row++)
                 {
-                    int y;
-                    if (settings.FlowDirection == VerticalFlowDirection.BottomToTop)
+                    int y = flowDirection == VerticalFlowDirection.BottomToTop
+                        ? Math.Max(workTop, bottomStartY - (row * stepY))
+                        : topStartY + (row * stepY);
+
+                    long cellKey = PackCellKey(x, y, stepX, stepY);
+                    if (occupiedCells.Contains(cellKey))
                     {
-                        y = bottomStartY - (row * stepY);
-                        if (y < workTop) y = workTop;
-                    }
-                    else
-                    {
-                        y = topStartY + (row * stepY);
+                        continue;
                     }
 
                     bool blocked = false;
@@ -841,7 +891,8 @@ namespace DesktopRightAlign.Native
                     if (!blocked)
                     {
                         availableSlots.Add(new POINT(x, y));
-                        if (availableSlots.Count >= entries.Count)
+                        occupiedCells.Add(cellKey);
+                        if (availableSlots.Count >= sideEntries.Count)
                         {
                             break;
                         }
@@ -852,14 +903,13 @@ namespace DesktopRightAlign.Native
                     }
                 }
 
-                if (availableSlots.Count >= entries.Count)
+                if (availableSlots.Count >= sideEntries.Count)
                 {
                     break;
                 }
             }
 
-            // Assign positions: prefer non-excluded slots; if screen is overfilled, gracefully use fallback slots.
-            for (int i = 0; i < entries.Count; i++)
+            for (int i = 0; i < sideEntries.Count; i++)
             {
                 POINT pt;
                 if (i < availableSlots.Count)
@@ -876,15 +926,15 @@ namespace DesktopRightAlign.Native
                     else
                     {
                         int rowIndex = i % rowsPerColumn;
-                        int y = settings.FlowDirection == VerticalFlowDirection.BottomToTop
+                        int y = flowDirection == VerticalFlowDirection.BottomToTop
                             ? Math.Max(workTop, bottomStartY - (rowIndex * stepY))
                             : topStartY + (rowIndex * stepY);
-                        pt = new POINT(workLeft, y);
+                        pt = new POINT(alignLeft ? leftStartX : workLeft, y);
                     }
                 }
 
-                entries[i].Info.TargetX = pt.X;
-                entries[i].Info.TargetY = pt.Y;
+                sideEntries[i].Info.TargetX = pt.X;
+                sideEntries[i].Info.TargetY = pt.Y;
             }
         }
 

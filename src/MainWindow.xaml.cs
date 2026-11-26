@@ -42,6 +42,8 @@ namespace DesktopRightAlign
             _trayService.AutoArrangeToggled += OnTrayAutoArrangeToggled;
             _trayService.LayoutGuardToggled += OnTrayLayoutGuardToggled;
             _trayService.SortModeSelected += OnTraySortModeSelected;
+            _trayService.AllAlignSideSelected += OnTrayAllAlignSideSelected;
+            _trayService.CategoryAlignChanged += OnTrayCategoryAlignChanged;
             _trayService.ExitRequested += ExecuteExit;
 
             SourceInitialized += OnSourceInitialized;
@@ -123,6 +125,21 @@ namespace DesktopRightAlign
             RadSortType.Content = LocalizationService.T("SortType");
             RadSortDate.Content = LocalizationService.T("SortDate");
 
+            LblAlignRuleTitle.Text = LocalizationService.T("AlignRuleTitle");
+            BtnAllLeft.Content = LocalizationService.T("AlignAllLeft");
+            BtnAllRight.Content = LocalizationService.T("AlignAllRight");
+            LblTypeSys.Text = LocalizationService.T("TypeSystemIcons");
+            LblTypeDir.Text = LocalizationService.T("TypeFolders");
+            LblTypeFile.Text = LocalizationService.T("TypeFiles");
+            string leftTxt = LocalizationService.T("AlignLeft");
+            string rightTxt = LocalizationService.T("AlignRight");
+            RadSysLeft.Content = leftTxt;
+            RadSysRight.Content = rightTxt;
+            RadDirLeft.Content = leftTxt;
+            RadDirRight.Content = rightTxt;
+            RadFileLeft.Content = leftTxt;
+            RadFileRight.Content = rightTxt;
+
             LblPreviewTitle.Text = LocalizationService.T("PreviewTitle");
             RadPreviewTarget.Content = LocalizationService.T("PreviewTarget");
             RadPreviewCurrent.Content = LocalizationService.T("PreviewCurrent");
@@ -150,6 +167,7 @@ namespace DesktopRightAlign
             RadFlowTop.Content = LocalizationService.T("FlowTop");
             RadFlowBottom.Content = LocalizationService.T("FlowBottom");
             LblMarginRightTitle.Text = LocalizationService.T("MarginRight");
+            LblMarginLeftTitle.Text = LocalizationService.T("MarginLeft");
             LblMarginTopTitle.Text = LocalizationService.T("MarginTop");
             LblMarginBottomTitle.Text = LocalizationService.T("MarginBottom");
             LblNativeSpacingTitle.Text = LocalizationService.T("NativeSpacingTitle");
@@ -230,7 +248,15 @@ namespace DesktopRightAlign
             RadFlowTop.IsChecked = _settings.FlowDirection == VerticalFlowDirection.TopToBottom;
             RadFlowBottom.IsChecked = _settings.FlowDirection == VerticalFlowDirection.BottomToTop;
 
+            RadSysLeft.IsChecked = _settings.SystemIconsAlign == DesktopAlignSide.Left;
+            RadSysRight.IsChecked = _settings.SystemIconsAlign != DesktopAlignSide.Left;
+            RadDirLeft.IsChecked = _settings.FoldersAlign == DesktopAlignSide.Left;
+            RadDirRight.IsChecked = _settings.FoldersAlign != DesktopAlignSide.Left;
+            RadFileLeft.IsChecked = _settings.FilesAlign == DesktopAlignSide.Left;
+            RadFileRight.IsChecked = _settings.FilesAlign != DesktopAlignSide.Left;
+
             SldRightMargin.Value = _settings.RightMargin;
+            SldLeftMargin.Value = _settings.LeftMargin;
             SldTopMargin.Value = _settings.TopMargin;
             SldBottomMargin.Value = _settings.BottomMargin;
             ChkNativeSpacing.IsChecked = _settings.UseNativeGridSpacing;
@@ -276,6 +302,7 @@ namespace DesktopRightAlign
         private void UpdateSliderLabels()
         {
             LblRightMargin.Text = string.Format("{0} px", (int)SldRightMargin.Value);
+            LblLeftMargin.Text = string.Format("{0} px", (int)SldLeftMargin.Value);
             LblTopMargin.Text = string.Format("{0} px", (int)SldTopMargin.Value);
             LblBottomMargin.Text = string.Format("{0} px", (int)SldBottomMargin.Value);
             LblSpaceX.Text = string.Format("{0} px", (int)SldSpaceX.Value);
@@ -635,6 +662,38 @@ namespace DesktopRightAlign
             }));
         }
 
+        private void OnTrayAllAlignSideSelected(DesktopAlignSide side)
+        {
+            Dispatcher.BeginInvoke(new Action(delegate
+            {
+                ApplyAllAlignSide(side);
+                if (!_settings.AutoArrangeEnabled) ExecuteArrangeNow();
+            }));
+        }
+
+        private void OnTrayCategoryAlignChanged(bool sysLeft, bool dirLeft, bool fileLeft)
+        {
+            Dispatcher.BeginInvoke(new Action(delegate
+            {
+                _isInitializing = true;
+                _settings.SystemIconsAlign = sysLeft ? DesktopAlignSide.Left : DesktopAlignSide.Right;
+                _settings.FoldersAlign = dirLeft ? DesktopAlignSide.Left : DesktopAlignSide.Right;
+                _settings.FilesAlign = fileLeft ? DesktopAlignSide.Left : DesktopAlignSide.Right;
+                RadSysLeft.IsChecked = sysLeft;
+                RadSysRight.IsChecked = !sysLeft;
+                RadDirLeft.IsChecked = dirLeft;
+                RadDirRight.IsChecked = !dirLeft;
+                RadFileLeft.IsChecked = fileLeft;
+                RadFileRight.IsChecked = !fileLeft;
+                _isInitializing = false;
+
+                _settings.Save();
+                _watcherService.Configure(_settings);
+                _trayService.SyncState(_settings);
+                ExecuteArrangeNow();
+            }));
+        }
+
         private void ShowAndActivate()
         {
             Dispatcher.BeginInvoke(new Action(delegate
@@ -764,6 +823,53 @@ namespace DesktopRightAlign
 
             _settings.SortAscending = RadSortAsc.IsChecked == true;
             _settings.Save();
+            _trayService.SyncState(_settings);
+
+            if (_settings.AutoArrangeEnabled) ExecuteArrangeNow();
+            else RefreshDesktopPreviewAndDiagnostics();
+        }
+
+        private void AlignSide_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isInitializing) return;
+
+            _settings.SystemIconsAlign = RadSysLeft.IsChecked == true ? DesktopAlignSide.Left : DesktopAlignSide.Right;
+            _settings.FoldersAlign = RadDirLeft.IsChecked == true ? DesktopAlignSide.Left : DesktopAlignSide.Right;
+            _settings.FilesAlign = RadFileLeft.IsChecked == true ? DesktopAlignSide.Left : DesktopAlignSide.Right;
+            _settings.Save();
+            _watcherService.Configure(_settings);
+            _trayService.SyncState(_settings);
+
+            if (_settings.AutoArrangeEnabled) ExecuteArrangeNow();
+            else RefreshDesktopPreviewAndDiagnostics();
+        }
+
+        private void BtnAllLeft_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyAllAlignSide(DesktopAlignSide.Left);
+        }
+
+        private void BtnAllRight_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyAllAlignSide(DesktopAlignSide.Right);
+        }
+
+        private void ApplyAllAlignSide(DesktopAlignSide side)
+        {
+            _isInitializing = true;
+            _settings.SystemIconsAlign = side;
+            _settings.FoldersAlign = side;
+            _settings.FilesAlign = side;
+            RadSysLeft.IsChecked = side == DesktopAlignSide.Left;
+            RadSysRight.IsChecked = side == DesktopAlignSide.Right;
+            RadDirLeft.IsChecked = side == DesktopAlignSide.Left;
+            RadDirRight.IsChecked = side == DesktopAlignSide.Right;
+            RadFileLeft.IsChecked = side == DesktopAlignSide.Left;
+            RadFileRight.IsChecked = side == DesktopAlignSide.Right;
+            _isInitializing = false;
+
+            _settings.Save();
+            _watcherService.Configure(_settings);
             _trayService.SyncState(_settings);
 
             if (_settings.AutoArrangeEnabled) ExecuteArrangeNow();
@@ -1024,6 +1130,7 @@ namespace DesktopRightAlign
             if (_isInitializing) return;
 
             _settings.RightMargin = (int)SldRightMargin.Value;
+            _settings.LeftMargin = (int)SldLeftMargin.Value;
             _settings.TopMargin = (int)SldTopMargin.Value;
             _settings.BottomMargin = (int)SldBottomMargin.Value;
             _settings.CustomHorizontalSpacing = (int)SldSpaceX.Value;

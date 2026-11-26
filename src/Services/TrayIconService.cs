@@ -20,6 +20,12 @@ namespace DesktopRightAlign.Services
         private readonly ToolStripMenuItem _sortSizeItem;
         private readonly ToolStripMenuItem _sortTypeItem;
         private readonly ToolStripMenuItem _sortDateItem;
+        private readonly ToolStripMenuItem _alignMenu;
+        private readonly ToolStripMenuItem _allLeftItem;
+        private readonly ToolStripMenuItem _allRightItem;
+        private readonly ToolStripMenuItem _sysLeftItem;
+        private readonly ToolStripMenuItem _dirLeftItem;
+        private readonly ToolStripMenuItem _fileLeftItem;
         private readonly ToolStripMenuItem _exitItem;
         private readonly Icon _appIcon;
 
@@ -30,6 +36,8 @@ namespace DesktopRightAlign.Services
         public event Action<bool> AutoArrangeToggled;
         public event Action<bool> LayoutGuardToggled;
         public event Action<DesktopSortMode> SortModeSelected;
+        public event Action<DesktopAlignSide> AllAlignSideSelected;
+        public event Action<bool, bool, bool> CategoryAlignChanged;
         public event Action ExitRequested;
 
         public TrayIconService()
@@ -74,6 +82,32 @@ namespace DesktopRightAlign.Services
             _sortDateItem = CreateSortItem(DesktopSortMode.DateModified);
             _sortMenu.DropDownItems.AddRange(new ToolStripItem[] { _sortNameItem, _sortSizeItem, _sortTypeItem, _sortDateItem });
 
+            _alignMenu = new ToolStripMenuItem();
+            _allLeftItem = new ToolStripMenuItem();
+            _allLeftItem.Click += delegate
+            {
+                Action<DesktopAlignSide> h = AllAlignSideSelected;
+                if (h != null) h(DesktopAlignSide.Left);
+            };
+            _allRightItem = new ToolStripMenuItem();
+            _allRightItem.Click += delegate
+            {
+                Action<DesktopAlignSide> h = AllAlignSideSelected;
+                if (h != null) h(DesktopAlignSide.Right);
+            };
+            _sysLeftItem = CreateCategoryToggleItem();
+            _dirLeftItem = CreateCategoryToggleItem();
+            _fileLeftItem = CreateCategoryToggleItem();
+            _alignMenu.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                _allLeftItem,
+                _allRightItem,
+                new ToolStripSeparator(),
+                _sysLeftItem,
+                _dirLeftItem,
+                _fileLeftItem
+            });
+
             _exitItem = new ToolStripMenuItem();
             _exitItem.Click += delegate { Raise(ExitRequested); };
 
@@ -81,6 +115,7 @@ namespace DesktopRightAlign.Services
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(_arrangeItem);
             menu.Items.Add(_sortMenu);
+            menu.Items.Add(_alignMenu);
             menu.Items.Add(_autoArrangeItem);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(_saveLayoutItem);
@@ -97,6 +132,18 @@ namespace DesktopRightAlign.Services
             _notifyIcon.DoubleClick += delegate { Raise(ShowWindowRequested); };
 
             RefreshLanguage();
+        }
+
+        private ToolStripMenuItem CreateCategoryToggleItem()
+        {
+            ToolStripMenuItem item = new ToolStripMenuItem();
+            item.CheckOnClick = true;
+            item.Click += delegate
+            {
+                Action<bool, bool, bool> h = CategoryAlignChanged;
+                if (h != null) h(_sysLeftItem.Checked, _dirLeftItem.Checked, _fileLeftItem.Checked);
+            };
+            return item;
         }
 
         private ToolStripMenuItem CreateSortItem(DesktopSortMode mode)
@@ -119,6 +166,12 @@ namespace DesktopRightAlign.Services
             _sortSizeItem.Text = LocalizationService.T("SortSize");
             _sortTypeItem.Text = LocalizationService.T("SortType");
             _sortDateItem.Text = LocalizationService.T("SortDate");
+            _alignMenu.Text = LocalizationService.T("TrayAlignMenu");
+            _allLeftItem.Text = LocalizationService.T("AlignAllLeft");
+            _allRightItem.Text = LocalizationService.T("AlignAllRight");
+            _sysLeftItem.Text = LocalizationService.T("TraySysLeft");
+            _dirLeftItem.Text = LocalizationService.T("TrayDirLeft");
+            _fileLeftItem.Text = LocalizationService.T("TrayFileLeft");
             _autoArrangeItem.Text = LocalizationService.T("TrayAuto");
             _saveLayoutItem.Text = LocalizationService.T("TraySave");
             _restoreLayoutItem.Text = LocalizationService.T("TrayRestore");
@@ -134,6 +187,12 @@ namespace DesktopRightAlign.Services
             _sortSizeItem.Checked = settings.SortMode == DesktopSortMode.Size;
             _sortTypeItem.Checked = settings.SortMode == DesktopSortMode.ItemType;
             _sortDateItem.Checked = settings.SortMode == DesktopSortMode.DateModified;
+
+            _sysLeftItem.Checked = settings.SystemIconsAlign == DesktopAlignSide.Left;
+            _dirLeftItem.Checked = settings.FoldersAlign == DesktopAlignSide.Left;
+            _fileLeftItem.Checked = settings.FilesAlign == DesktopAlignSide.Left;
+            _allLeftItem.Checked = _sysLeftItem.Checked && _dirLeftItem.Checked && _fileLeftItem.Checked;
+            _allRightItem.Checked = !_sysLeftItem.Checked && !_dirLeftItem.Checked && !_fileLeftItem.Checked;
         }
 
         private static void Raise(Action action)

@@ -203,6 +203,61 @@
                                         <RadioButton x:Name="RadSortDate" Content="修改日期" Tag="&#xE823;" GroupName="SortMode"
                                                      Style="{StaticResource SortTileRadioStyle}" Margin="0" Checked="SortSetting_Changed"/>
                                     </UniformGrid>
+
+                                    <!-- Per-Category Left / Right Alignment -->
+                                    <Border BorderBrush="{DynamicResource BorderBrushSubtle}"
+                                            BorderThickness="0,0.8,0,0"
+                                            Margin="0,14,0,0"
+                                            Padding="0,12,0,0">
+                                        <StackPanel>
+                                            <Grid Margin="0,0,0,10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock x:Name="LblAlignRuleTitle" Grid.Column="0" Text="按类型选择靠左 / 靠右"
+                                                           FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                    <Button x:Name="BtnAllLeft" Content="全部靠左" Style="{StaticResource FluentButtonStyle}"
+                                                            Padding="10,4" FontSize="11.5" Margin="0,0,6,0" Click="BtnAllLeft_Click"/>
+                                                    <Button x:Name="BtnAllRight" Content="全部靠右" Style="{StaticResource FluentButtonStyle}"
+                                                            Padding="10,4" FontSize="11.5" Click="BtnAllRight_Click"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <UniformGrid Columns="3">
+                                                <Border Background="{DynamicResource ControlBgBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,0">
+                                                    <DockPanel>
+                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                            <RadioButton x:Name="RadSysLeft" Content="靠左" GroupName="AlignSys" Style="{StaticResource SegmentRadioStyle}" Padding="9,4" FontSize="11.5" Margin="0,0,4,0" Checked="AlignSide_Changed"/>
+                                                            <RadioButton x:Name="RadSysRight" Content="靠右" GroupName="AlignSys" Style="{StaticResource SegmentRadioStyle}" Padding="9,4" FontSize="11.5" Checked="AlignSide_Changed"/>
+                                                        </StackPanel>
+                                                        <TextBlock x:Name="LblTypeSys" Text="系统图标" FontSize="12.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                    </DockPanel>
+                                                </Border>
+
+                                                <Border Background="{DynamicResource ControlBgBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,0">
+                                                    <DockPanel>
+                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                            <RadioButton x:Name="RadDirLeft" Content="靠左" GroupName="AlignDir" Style="{StaticResource SegmentRadioStyle}" Padding="9,4" FontSize="11.5" Margin="0,0,4,0" Checked="AlignSide_Changed"/>
+                                                            <RadioButton x:Name="RadDirRight" Content="靠右" GroupName="AlignDir" Style="{StaticResource SegmentRadioStyle}" Padding="9,4" FontSize="11.5" Checked="AlignSide_Changed"/>
+                                                        </StackPanel>
+                                                        <TextBlock x:Name="LblTypeDir" Text="文件夹" FontSize="12.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                    </DockPanel>
+                                                </Border>
+
+                                                <Border Background="{DynamicResource ControlBgBrush}" CornerRadius="10" Padding="10,8">
+                                                    <DockPanel>
+                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                            <RadioButton x:Name="RadFileLeft" Content="靠左" GroupName="AlignFile" Style="{StaticResource SegmentRadioStyle}" Padding="9,4" FontSize="11.5" Margin="0,0,4,0" Checked="AlignSide_Changed"/>
+                                                            <RadioButton x:Name="RadFileRight" Content="靠右" GroupName="AlignFile" Style="{StaticResource SegmentRadioStyle}" Padding="9,4" FontSize="11.5" Checked="AlignSide_Changed"/>
+                                                        </StackPanel>
+                                                        <TextBlock x:Name="LblTypeFile" Text="文件与快捷方式" FontSize="12.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                    </DockPanel>
+                                                </Border>
+                                            </UniformGrid>
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
                             </Border>
 
@@ -367,19 +422,24 @@
                                             <RowDefinition Height="30"/>
                                             <RowDefinition Height="30"/>
                                             <RowDefinition Height="30"/>
+                                            <RowDefinition Height="30"/>
                                         </Grid.RowDefinitions>
 
                                         <TextBlock x:Name="LblMarginRightTitle" Grid.Row="0" Grid.Column="0" Text="右边距" VerticalAlignment="Center"/>
                                         <Slider x:Name="SldRightMargin" Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="120" TickFrequency="4" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="Slider_ValueChanged"/>
                                         <TextBlock x:Name="LblRightMargin" Grid.Row="0" Grid.Column="2" Text="12 px" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
 
-                                        <TextBlock x:Name="LblMarginTopTitle" Grid.Row="1" Grid.Column="0" Text="上边距" VerticalAlignment="Center"/>
-                                        <Slider x:Name="SldTopMargin" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="120" TickFrequency="4" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="Slider_ValueChanged"/>
-                                        <TextBlock x:Name="LblTopMargin" Grid.Row="1" Grid.Column="2" Text="12 px" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="LblMarginLeftTitle" Grid.Row="1" Grid.Column="0" Text="左边距" VerticalAlignment="Center"/>
+                                        <Slider x:Name="SldLeftMargin" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="120" TickFrequency="4" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="Slider_ValueChanged"/>
+                                        <TextBlock x:Name="LblLeftMargin" Grid.Row="1" Grid.Column="2" Text="12 px" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
 
-                                        <TextBlock x:Name="LblMarginBottomTitle" Grid.Row="2" Grid.Column="0" Text="下边距" VerticalAlignment="Center"/>
-                                        <Slider x:Name="SldBottomMargin" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="120" TickFrequency="4" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="Slider_ValueChanged"/>
-                                        <TextBlock x:Name="LblBottomMargin" Grid.Row="2" Grid.Column="2" Text="12 px" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="LblMarginTopTitle" Grid.Row="2" Grid.Column="0" Text="上边距" VerticalAlignment="Center"/>
+                                        <Slider x:Name="SldTopMargin" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="120" TickFrequency="4" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="Slider_ValueChanged"/>
+                                        <TextBlock x:Name="LblTopMargin" Grid.Row="2" Grid.Column="2" Text="12 px" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+                                        <TextBlock x:Name="LblMarginBottomTitle" Grid.Row="3" Grid.Column="0" Text="下边距" VerticalAlignment="Center"/>
+                                        <Slider x:Name="SldBottomMargin" Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="120" TickFrequency="4" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="Slider_ValueChanged"/>
+                                        <TextBlock x:Name="LblBottomMargin" Grid.Row="3" Grid.Column="2" Text="12 px" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                     </Grid>
 
                                     <Grid Margin="0,4,0,10">

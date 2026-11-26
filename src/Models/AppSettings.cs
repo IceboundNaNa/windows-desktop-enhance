@@ -67,6 +67,12 @@ namespace DesktopRightAlign.Models
         Light = 2
     }
 
+    public enum DesktopAlignSide
+    {
+        Right = 0,
+        Left = 1
+    }
+
     [DataContract]
     public class AppSettings
     {
@@ -92,7 +98,19 @@ namespace DesktopRightAlign.Models
         public int RightMargin { get; set; }
 
         [DataMember]
+        public int LeftMargin { get; set; }
+
+        [DataMember]
         public int TopMargin { get; set; }
+
+        [DataMember]
+        public DesktopAlignSide SystemIconsAlign { get; set; }
+
+        [DataMember]
+        public DesktopAlignSide FoldersAlign { get; set; }
+
+        [DataMember]
+        public DesktopAlignSide FilesAlign { get; set; }
 
         [DataMember]
         public int BottomMargin { get; set; }
@@ -148,8 +166,12 @@ namespace DesktopRightAlign.Models
             SortAscending = true;
             FlowDirection = VerticalFlowDirection.TopToBottom;
             RightMargin = 12;
+            LeftMargin = 12;
             TopMargin = 12;
             BottomMargin = 12;
+            SystemIconsAlign = DesktopAlignSide.Right;
+            FoldersAlign = DesktopAlignSide.Right;
+            FilesAlign = DesktopAlignSide.Right;
             UseNativeGridSpacing = true;
             CustomHorizontalSpacing = 96;
             CustomVerticalSpacing = 96;
